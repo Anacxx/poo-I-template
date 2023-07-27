@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { TAccountDB, TAccountDBPost, TUserDB, TUserDBPost } from './types'
 import { db } from './database/knex'
-
+import { User } from './models/User'
 const app = express()
 
 app.use(cors())
@@ -29,7 +29,7 @@ app.get("/ping", async (req: Request, res: Response) => {
         }
     }
 })
-
+//Já está com classe
 app.get("/users", async (req: Request, res: Response) => {
     try {
         const q = req.query.q
@@ -43,8 +43,17 @@ app.get("/users", async (req: Request, res: Response) => {
             const result: TUserDB[] = await db("users")
             usersDB = result
         }
-
-        res.status(200).send(usersDB)
+        const users = usersDB.map((userDB) => {
+            return new User(
+              userDB.id,
+              userDB.name,
+              userDB.email,
+              userDB.password,
+              userDB.created_at
+            )
+          })
+  
+        res.status(200).send(users)
     } catch (error) {
         console.log(error)
 
@@ -59,7 +68,7 @@ app.get("/users", async (req: Request, res: Response) => {
         }
     }
 })
-
+//Já está com classe
 app.post("/users", async (req: Request, res: Response) => {
     try {
         const { id, name, email, password } = req.body
@@ -90,18 +99,25 @@ app.post("/users", async (req: Request, res: Response) => {
             res.status(400)
             throw new Error("'id' já existe")
         }
-
-        const newUser: TUserDBPost = {
+        const user = new User(
             id,
             name,
             email,
-            password
+            password,
+            new Date().toISOString()
+        )
+
+        const newUser: TUserDB = {
+            id: user.getId(),
+            name: user.getName(),
+            email: user.getEmail(),
+            password: user.getPassword(),
+            created_at: user.getCreatedAt()
         }
-
         await db("users").insert(newUser)
-        const [ userDB ]: TUserDB[] = await db("users").where({ id })
+        //const [ userDB ]: TUserDB[] = await db("users").where({ id })
 
-        res.status(201).send(userDB)
+        res.status(201).send(user)
     } catch (error) {
         console.log(error)
 
